@@ -106,6 +106,11 @@ const Props = {
     type: Boolean,
     default: false,
   },
+  // 是否支持鼠标拖动
+  mouseMove:{
+    type: Boolean,
+    default: false,
+  }
 };
 
 globalThis.window.cancelAnimationFrame = (function () {
@@ -242,6 +247,7 @@ const Vue3SeamlessScroll = defineComponent({
       return _step;
     });
 
+
     const cancle = () => {
       cancelAnimationFrame(reqFrame.value as number);
       reqFrame.value = null;
@@ -363,7 +369,11 @@ const Vue3SeamlessScroll = defineComponent({
       () => props.hover && props.modelValue && isScroll.value
     );
 
-    const throttleFunc = throttle(30, (e: WheelEvent) => {
+    const canMouseMove = computed(
+      () => props.mouseMove && props.hover && props.modelValue && isScroll.value
+    );
+
+    const throttleFunc = throttle(30, (e: {deltaY:number}) => {
       cancle();
       const singleHeight = !!realSingleStopHeight.value
         ? realSingleStopHeight.value
@@ -379,6 +389,28 @@ const Vue3SeamlessScroll = defineComponent({
     const onWheel = (e: WheelEvent) => {
       throttleFunc(e);
     };
+
+    let mouseY = 0;
+    let isMouseMove = false;
+
+    const onMouseDown = (e:MouseEvent)=>{
+      if(canMouseMove){
+        isMouseMove = true;
+        mouseY = e.clientY;
+      }
+    }
+
+    const onMouseUp = ()=>{
+      if(canMouseMove){
+        isMouseMove = false;
+      }
+    }
+
+    const onMouseMove = (e:MouseEvent)=>{
+      if(!isMouseMove) return;
+      throttleFunc({deltaY:mouseY - e.clientY});
+      mouseY = e.clientY;
+    }
 
     const reset = () => {
       cancle();
@@ -465,13 +497,14 @@ const Vue3SeamlessScroll = defineComponent({
           <div
             ref={realBoxRef}
             style={realBoxStyle.value}
-            onMouseenter={() => {
+            onMouseenter={(e) => {
               if (hoverStop.value) {
                 stopMove();
               }
             }}
-            onMouseleave={() => {
+            onMouseleave={(e) => {
               if (hoverStop.value) {
+                onMouseUp();
                 startMove();
               }
             }}
@@ -479,6 +512,15 @@ const Vue3SeamlessScroll = defineComponent({
               if (hoverStop.value) {
                 onWheel(e);
               }
+            }}
+            onMousedown={(e)=>{
+              onMouseDown(e);
+            }}
+            onMouseup={()=>{
+              onMouseUp();
+            }}
+            onMousemove={(e)=>{
+              onMouseMove(e);
             }}
           >
             {getHtml()}

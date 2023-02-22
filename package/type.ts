@@ -16,6 +16,7 @@ type propType = {
   copyNum: number,
   wheel: boolean,
   singleLine: boolean,
+  mouseMove: boolean,
 };
 
 export default propType
