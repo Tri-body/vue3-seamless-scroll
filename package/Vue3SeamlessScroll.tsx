@@ -370,7 +370,7 @@ const Vue3SeamlessScroll = defineComponent({
     );
 
     const canMouseMove = computed(
-      () => props.mouseMove && props.hover && props.modelValue && isScroll.value
+      () => props.mouseMove && isScroll.value
     );
 
     const throttleFunc = throttle(30, (e: {deltaY:number}) => {
@@ -392,17 +392,26 @@ const Vue3SeamlessScroll = defineComponent({
 
     let mouseY = 0;
     let isMouseMove = false;
+    let isTouchMove = false;
+    let noHover = false;
 
     const onMouseDown = (e:MouseEvent)=>{
-      if(canMouseMove){
+      if(canMouseMove.value){
+        if(!isHover.value){
+          stopMove();
+          noHover = true;
+        }
         isMouseMove = true;
         mouseY = e.clientY;
       }
     }
 
     const onMouseUp = ()=>{
-      if(canMouseMove){
+      if(canMouseMove.value){
         isMouseMove = false;
+        if(noHover){
+          startMove();
+        }
       }
     }
 
@@ -410,6 +419,35 @@ const Vue3SeamlessScroll = defineComponent({
       if(!isMouseMove) return;
       throttleFunc({deltaY:mouseY - e.clientY});
       mouseY = e.clientY;
+    }
+
+    const onTouchStart = (e:TouchEvent) => {
+      if(canMouseMove.value){
+        if(!isHover.value){
+          stopMove();
+          noHover = true;
+        }
+        isTouchMove = true;
+        const touch = e.targetTouches[0];
+        mouseY = touch.clientY;
+      }
+    }
+
+    const onTouchMove = (e:TouchEvent) => {
+      if(!isTouchMove) return;
+      const touch = e.targetTouches[0];
+      throttleFunc({deltaY:mouseY - touch.clientY});
+      mouseY = touch.clientY;
+      e.preventDefault();
+    }
+
+    const onTouchEnd = () => {
+      if(canMouseMove.value){
+        isTouchMove = false;
+        if(noHover){
+          startMove();
+        }
+      }
     }
 
     const reset = () => {
@@ -503,8 +541,9 @@ const Vue3SeamlessScroll = defineComponent({
               }
             }}
             onMouseleave={(e) => {
+              onMouseUp();
+              onTouchEnd();
               if (hoverStop.value) {
-                onMouseUp();
                 startMove();
               }
             }}
@@ -522,6 +561,9 @@ const Vue3SeamlessScroll = defineComponent({
             onMousemove={(e)=>{
               onMouseMove(e);
             }}
+            onTouchstart={onTouchStart}
+            onTouchmove={onTouchMove}
+            onTouchend={onTouchEnd}
           >
             {getHtml()}
           </div>
@@ -535,10 +577,23 @@ const Vue3SeamlessScroll = defineComponent({
               }
             }}
             onMouseleave={() => {
+              onMouseUp();
               if (hoverStop.value) {
                 startMove();
               }
             }}
+            onMousedown={(e)=>{
+              onMouseDown(e);
+            }}
+            onMouseup={()=>{
+              onMouseUp();
+            }}
+            onMousemove={(e)=>{
+              onMouseMove(e);
+            }}
+            onTouchstart={onTouchStart}
+            onTouchmove={onTouchMove}
+            onTouchend={onTouchEnd}
           >
             {getHtml()}
           </div>
